@@ -1,0 +1,154 @@
+{
+  "resume": {
+    "id": "resume_001",
+    "title": "Data Analyst",
+    "experience": {
+      "label": "опыт кандидата: 2.5 года",
+      "years": 2.5
+    },
+    "skills": ["Python", "SQL", "Pandas", "Machine Learning", "Statistics"]
+  },
+  "recommendations": [
+    {
+      "id": "vacancy_001",
+      "rank": 1,
+      "title": "Data Analyst",
+      "company": "Company A",
+      "location": "Москва",
+      "url": "https://hh.ru/vacancy/111111",
+      "source": "hh.ru",
+      "experience": {
+        "label": "требуемый опыт: 2-3 года",
+        "min_years": 2,
+        "max_years": 3
+      },
+      "scores": {
+        "final": 0.83,
+        "semantic": 0.76,
+        "skills": 0.85,
+        "experience": 0.90
+      },
+      "matching": {
+        "matched_skills": ["Python", "SQL", "Pandas", "Statistics"],
+        "missing_skills": ["Excel"],
+        "resume_experience_label": "2.5 года",
+        "vacancy_experience_label": "2-3 года",
+        "experience_comment": "Опыт кандидата соответствует требованиям вакансии"
+      }
+    },
+    {
+      "id": "vacancy_002",
+      "rank": 2,
+      "title": "Junior Data Analyst",
+      "company": "Company B",
+      "location": "Москва",
+      "url": "https://hh.ru/vacancy/222222",
+      "source": "hh.ru",
+      "experience": {
+        "label": "требуемый опыт: 1-3 года",
+        "min_years": 1,
+        "max_years": 3
+      },
+      "scores": {
+        "final": 0.76,
+        "semantic": 0.69,
+        "skills": 0.81,
+        "experience": 0.85
+      },
+      "matching": {
+        "matched_skills": ["Python", "SQL", "Pandas"],
+        "missing_skills": ["Power BI", "Excel"],
+        "resume_experience_label": "2.5 года",
+        "vacancy_experience_label": "1-3 года",
+        "experience_comment": "Опыт кандидата соответствует требованиям вакансии"
+      }
+    },
+    {
+      "id": "vacancy_003",
+      "rank": 3,
+      "title": "BI Analyst",
+      "company": "Company C",
+      "location": "Санкт-Петербург",
+      "url": "https://hh.ru/vacancy/333333",
+      "source": "hh.ru",
+      "experience": {
+        "label": "требуемый опыт: 2-4 года",
+        "min_years": 2,
+        "max_years": 4
+      },
+      "scores": {
+        "final": 0.72,
+        "semantic": 0.67,
+        "skills": 0.73,
+        "experience": 0.80
+      },
+      "matching": {
+        "matched_skills": ["SQL", "Pandas", "Statistics"],
+        "missing_skills": ["Power BI", "Tableau"],
+        "resume_experience_label": "2.5 года",
+        "vacancy_experience_label": "2-4 года",
+        "experience_comment": "Опыт кандидата находится в допустимом диапазоне"
+      }
+    },
+    {
+      "id": "vacancy_004",
+      "rank": 4,
+      "title": "Data Engineer",
+      "company": "Company D",
+      "location": "Москва",
+      "url": "https://hh.ru/vacancy/444444",
+      "source": "hh.ru",
+      "experience": {
+        "label": "требуемый опыт: 1-3 года",
+        "min_years": 1,
+        "max_years": 3
+      },
+      "scores": {
+        "final": 0.64,
+        "semantic": 0.62,
+        "skills": 0.65,
+        "experience": 0.78
+      },
+      "matching": {
+        "matched_skills": ["Python", "SQL"],
+        "missing_skills": ["Airflow", "Spark", "Docker"],
+        "resume_experience_label": "2.5 года",
+        "vacancy_experience_label": "1-3 года",
+        "experience_comment": "Опыт кандидата соответствует требованиям вакансии"
+      }
+    },
+    {
+      "id": "vacancy_005",
+      "rank": 5,
+      "title": "ML Analyst",
+      "company": "Company E",
+      "location": "Казань",
+      "url": "https://hh.ru/vacancy/555555",
+      "source": "hh.ru",
+      "experience": {
+        "label": "требуемый опыт: 2-4 года",
+        "min_years": 2,
+        "max_years": 4
+      },
+      "scores": {
+        "final": 0.58,
+        "semantic": 0.55,
+        "skills": 0.60,
+        "experience": 0.70
+      },
+      "matching": {
+        "matched_skills": ["Python", "Machine Learning", "Statistics"],
+        "missing_skills": ["PyTorch", "NLP", "Docker"],
+        "resume_experience_label": "2.5 года",
+        "vacancy_experience_label": "2-4 года",
+        "experience_comment": "Опыт кандидата подходит, но есть недостающие навыки"
+      }
+    }
+  ],
+  "selected_vacancy_id": "vacancy_001",
+  "meta": {
+    "model_name": "TF-IDF + Logistic Regression",
+    "top_k": 5,
+    "generated_at": "2026-05-23T12:00:00"
+  }
+}
