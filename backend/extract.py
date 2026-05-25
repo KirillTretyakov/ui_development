@@ -1,6 +1,7 @@
 import re
 
 
+
 def normalize_text(text: str) -> str:
     """
     Нормализует текст резюме:
@@ -72,58 +73,100 @@ def extract_exp(text):
     return round(years + months / 12, 2)
 
 
-def extract_skills(text):
-    """
-    Извлекает навыки из блока после слова 'Навыки'.
 
-    Логика:
-    - ищем отдельную строку 'Навыки';
-    - берем текст после нее;
-    - останавливаемся на разделе 'Обо мне' или других крупных разделах;
-    - удаляем служебные строки с уровнями владения.
-    """
-    text = normalize_text(text)
-    matches = list(
-        re.finditer(
-            r"^Навыки\s*$",
-            text,
-            flags=re.IGNORECASE | re.MULTILINE
-        )
-    )
+def extract_skills(text):
+    text = str(text)
+
+    # ищем последнее слово "Навыки"
+    matches = list(re.finditer(r'\bНавыки\b', text, flags=re.IGNORECASE))
+
     if not matches:
         return []
+
     last_match = matches[-1]
+
+    # берем все после последнего "Навыки"
     block = text[last_match.end():].strip()
-    stop_pattern = re.compile(
-        r"^(Обо мне|Знание языков|Повышение квалификации, курсы|Гражданство, время в пути до работы)\s*$",
-        flags=re.IGNORECASE | re.MULTILINE
-    )
-    stop_match = stop_pattern.search(block)
-    if stop_match:
-        block = block[:stop_match.start()].strip()
+
+    # убираем все после "Дополнительная информация"
+    block = re.split(
+        r'Дополнительная информация',
+        block,
+        maxsplit=1,
+        flags=re.IGNORECASE
+    )[0].strip()
+
+    # разбиваем на строки
     lines = block.splitlines()
+
+    # убираем пустые строки
     lines = [line.strip() for line in lines if line.strip()]
 
-    skip_lines = {
-        "уровни владения навыками",
-        "продвинутый уровень",
-        "средний уровень",
-        "базовый уровень",
-        "уровень не указан",
-        "опыт вождения",
-        "имеется собственный автомобиль",
-        "права категории b",
-        "водительское удостоверение категории b"
-    }
+    # отбрасываем последнюю строку, если нужно
+    if lines:
+        lines = lines[:-1]
 
-    skills = []
+    text_skills = "\n".join(lines).replace('\n', '      ')
+    list_skills = text_skills.split('      ')
 
-    for line in lines:
-        normalized_line = line.lower().strip()
+    # дополнительно убираем пустые элементы
+    list_skills = [skill.strip() for skill in list_skills if skill.strip()]
 
-        if normalized_line in skip_lines:
-            continue
+    return list_skills
 
-        skills.append(line)
 
-    return skills
+# def extract_skills(text):
+#     """
+#     Извлекает навыки из блока после слова 'Навыки'.
+
+#     Логика:
+#     - ищем отдельную строку 'Навыки';
+#     - берем текст после нее;
+#     - останавливаемся на разделе 'Обо мне' или других крупных разделах;
+#     - удаляем служебные строки с уровнями владения.
+#     """
+#     text = normalize_text(text)
+#     matches = list(
+#         re.finditer(
+#             r"^Навыки\s*$",
+#             text,
+#             flags=re.IGNORECASE | re.MULTILINE
+#         )
+#     )
+#     if not matches:
+#         return []
+#     last_match = matches[-1]
+#     block = text[last_match.end():].strip()
+#     stop_pattern = re.compile(
+#         r"^(Обо мне|Знание языков|Повышение квалификации, курсы|Гражданство, время в пути до работы)\s*$",
+#         flags=re.IGNORECASE | re.MULTILINE
+#     )
+#     stop_match = stop_pattern.search(block)
+#     if stop_match:
+#         block = block[:stop_match.start()].strip()
+#     lines = block.splitlines()
+#     lines = [line.strip() for line in lines if line.strip()]
+
+#     skip_lines = {
+#         "уровни владения навыками",
+#         "продвинутый уровень",
+#         "средний уровень",
+#         "базовый уровень",
+#         "уровень не указан",
+#         "опыт вождения",
+#         "имеется собственный автомобиль",
+#         "права категории b",
+#         "водительское удостоверение категории b"
+#     }
+
+#     skills = []
+
+#     for line in lines:
+#         normalized_line = line.lower().strip()
+
+#         if normalized_line in skip_lines:
+#             continue
+
+#         skills.append(line)
+
+#     return skills

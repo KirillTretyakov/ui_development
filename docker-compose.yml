@@ -1,0 +1,18 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    container_name: resume_backend
+    ports:
+      - "8000:8000"
+    restart: always
+
+  frontend:
+    build:
+      context: ./front/ui
+    container_name: resume_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: always
