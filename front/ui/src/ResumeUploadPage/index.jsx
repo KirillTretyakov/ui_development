@@ -12,6 +12,10 @@ export default function ResumeUploadPage({ onMatchResult }) {
   const [loading, setLoading] = useState(false);
   const [errorText, setErrorText] = useState("");
 
+  const API_URL = import.meta.env.VITE_API_URL || "/api";
+
+
+
   const handleUploadClick = () => {
     fileInputRef.current?.click();
   };
@@ -40,7 +44,7 @@ export default function ResumeUploadPage({ onMatchResult }) {
       const formData = new FormData();
       formData.append("file", selectedFile);
 
-      const response = await fetch("http://localhost:8000/get_data_pdf", {
+      const response = await fetch(`${API_URL}/get_data_pdf`, {
         method: "POST",
         body: formData,
       });
