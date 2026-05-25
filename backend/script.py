@@ -1,3 +1,4 @@
+import pandas as pd
 from schema import (
     RecommendationResponse,
     SelectedResume,
@@ -10,6 +11,102 @@ from schema import (
     ResponseMeta,
 )
 from read import reader
+from matcher import match
+import ast
+
+def normalize_skill(skill: str) -> str:
+    return str(skill).lower().strip()
+
+
+def calculate_experience_score(candidate_experience, required_experience):
+    """
+    Считает соответствие опыта кандидата требованиям вакансии.
+
+    Если требуемый опыт не указан — считаем, что ограничений нет.
+    Если опыт кандидата >= требуемого — score = 1.
+    Если опыт кандидата меньше — score = candidate / required.
+    """
+
+    if candidate_experience is None:
+        candidate_experience = 0
+
+    if required_experience is None or pd.isna(required_experience):
+        return 1.0
+
+    candidate_experience = float(candidate_experience)
+    required_experience = float(required_experience)
+
+    if required_experience == 0:
+        return 1.0
+
+    if candidate_experience >= required_experience:
+        return 1.0
+
+    return candidate_experience / required_experience
+
+
+def calculate_skill_match(resume_skills: list, vacancy_skills: list):
+    """
+    Сопоставляет навыки резюме и вакансии.
+
+    Возвращает:
+    - matched_skills: совпавшие навыки
+    - missing_skills: навыки вакансии, которых нет в резюме
+    - skill_score: доля совпавших навыков
+    """
+
+    resume_skills = resume_skills or []
+    vacancy_skills = vacancy_skills or []
+
+    # Если навыки вакансии пришли из CSV строкой вида "['sql', 'python']",
+    # преобразуем строку в обычный список.
+    if isinstance(vacancy_skills, str):
+        try:
+            vacancy_skills = ast.literal_eval(vacancy_skills)
+        except Exception:
+            vacancy_skills = [vacancy_skills]
+
+    # Если после преобразования получилось не list, приводим к пустому списку.
+    if not isinstance(vacancy_skills, list):
+        vacancy_skills = []
+
+    if not isinstance(resume_skills, list):
+        resume_skills = []
+
+    resume_map = {
+        normalize_skill(skill): skill
+        for skill in resume_skills
+        if str(skill).strip()
+    }
+
+    vacancy_map = {
+        normalize_skill(skill): skill
+        for skill in vacancy_skills
+        if str(skill).strip()
+    }
+
+    resume_set = set(resume_map.keys())
+    vacancy_set = set(vacancy_map.keys())
+
+    matched_keys = resume_set & vacancy_set
+    missing_keys = vacancy_set - resume_set
+
+    matched_skills = [
+        vacancy_map[key]
+        for key in matched_keys
+    ]
+
+    missing_skills = [
+        vacancy_map[key]
+        for key in missing_keys
+    ]
+
+    if vacancy_set:
+        skill_score = len(matched_keys) / len(vacancy_set)
+    else:
+        skill_score = 0
+
+    return matched_skills, missing_skills, skill_score, vacancy_skills
 
 
 def get_selected_resume(raw_resume: str) -> SelectedResume:
@@ -23,285 +120,99 @@ def get_selected_resume(raw_resume: str) -> SelectedResume:
     return SelectedResume(
         id="resume_001",
         title=resume_data["title"],
-        experienceYears=resume_data["experience_years"],
+        experienceYears=float(resume_data["experience_years"]),
         skills=resume_data["skills"],
+        clean_text=resume_data["clean_text"],
     )
 
 
-def get_vacancy_recommendations(selected_resume: SelectedResume) -> list[VacancyRecommendation]:
+def get_vacancy_recommendations(
+    selected_resume: SelectedResume,
+) -> list[VacancyRecommendation]:
     """
-    Возвращает top-5 рекомендованных вакансий.
-
-    Сейчас данные тестовые.
-    Позже здесь будет вызов модели сопоставления резюме и вакансий.
+    Возвращает top-5 рекомендованных вакансий на основе модели
+    TF-IDF + Logistic Regression.
     """
 
-    vacancies = [
-        VacancyRecommendation(
-            id="vacancy_001",
-            rank=1,
-            title="Data Analyst",
-            company="Яндекс",
-            city="Москва",
-            url="https://hh.ru/vacancy/111111",
+    df_vac = pd.read_csv("df_vac_final_without_score_gt_095.csv")
+    vac_df = match(
+        df_vac=df_vac,
+        text=selected_resume.clean_text,
+        top_k=5
+    )
+
+    vacancies = []
+
+    for idx, row in vac_df.iterrows():
+        vacancy_skills = row.get("skills_final") or []
+
+        matched_skills, missing_skills, skill_score, vacancy_skills = calculate_skill_match(
+            resume_skills=selected_resume.skills,
+            vacancy_skills=vacancy_skills,
+        )
+
+        experience_min = row.get("experience_years_min")
+
+        if pd.isna(experience_min):
+            min_years = None
+            experience_label = "не указано"
+        else:
+            min_years = float(experience_min)
+            experience_label = f"от {min_years:g} лет"
+
+        experience_score = calculate_experience_score(
+            candidate_experience=selected_resume.experienceYears,
+            required_experience=min_years
+        )
+
+        model_score = float(row.get("model_score", 0))
+
+        vacancy = VacancyRecommendation(
+            id=str(row.get("id")),
+            rank=idx + 1,
+
+            title=str(row.get("vacancy_name")),
+            company=None,
+            city=None,
+
+            url=row.get("vacancy_url"),
             source="hh.ru",
-            format="офис",
+            format=None,
+
             experience=VacancyExperience(
-                label="2-4 года",
-                minYears=2,
-                maxYears=4,
+                label=experience_label,
+                minYears=min_years,
+                maxYears=None,
             ),
+
             scores=VacancyScores(
-                totalScore=0.83,
-                semanticScore=0.76,
-                skillScore=0.85,
-                experienceScore=0.90,
+                totalScore=round(model_score, 4),
+                semanticScore=round(model_score, 4),
+                skillScore=round(skill_score, 4),
+                experienceScore=round(experience_score, 4),
             ),
+
             matching=VacancyMatching(
                 skillMatch=SkillMatch(
-                    matched=[
-                        "Python",
-                        "SQL",
-                        "Pandas",
-                        "Machine Learning",
-                        "Statistics",
-                    ],
-                    partial=[
-                        "NumPy",
-                        "Data Analysis",
-                        "Excel",
-                        "Data Visualization",
-                    ],
-                    missing=[
-                        "Git",
-                    ],
+                    matched=matched_skills,
+                    partial=[],
+                    missing=missing_skills,
                 ),
                 candidateExperienceYears=selected_resume.experienceYears,
-                requiredExperienceLabel="2-4 года",
-                experienceComment="Опыт кандидата соответствует требованиям вакансии",
-                allResumeSkills=selected_resume.skills,
-                allVacancySkills=[
-                    "Python",
-                    "SQL",
-                    "Pandas",
-                    "Machine Learning",
-                    "Statistics",
-                    "NumPy",
-                    "Data Analysis",
-                    "Excel",
-                    "Data Visualization",
-                    "Git",
-                ],
-            ),
-        ),
-        VacancyRecommendation(
-            id="vacancy_002",
-            rank=2,
-            title="Junior Data Analyst",
-            company="Сбер",
-            city="Москва",
-            url="https://hh.ru/vacancy/222222",
-            source="hh.ru",
-            format="гибрид",
-            experience=VacancyExperience(
-                label="1-3 года",
-                minYears=1,
-                maxYears=3,
-            ),
-            scores=VacancyScores(
-                totalScore=0.76,
-                semanticScore=0.76,
-                skillScore=0.80,
-                experienceScore=0.75,
-            ),
-            matching=VacancyMatching(
-                skillMatch=SkillMatch(
-                    matched=[
-                        "Python",
-                        "SQL",
-                        "Pandas",
-                        "Excel",
-                    ],
-                    partial=[
-                        "Data Analysis",
-                        "Statistics",
-                    ],
-                    missing=[
-                        "Power BI",
-                    ],
+                requiredExperienceLabel=experience_label,
+                experienceComment=(
+                    "Опыт кандидата соответствует требованиям вакансии"
+                    if experience_score == 1
+                    else "Опыт кандидата ниже минимальных требований вакансии"
                 ),
-                candidateExperienceYears=selected_resume.experienceYears,
-                requiredExperienceLabel="1-3 года",
-                experienceComment="Опыт кандидата подходит под требования вакансии",
                 allResumeSkills=selected_resume.skills,
-                allVacancySkills=[
-                    "Python",
-                    "SQL",
-                    "Pandas",
-                    "Excel",
-                    "Power BI",
-                    "Data Analysis",
-                    "Statistics",
-                ],
+                allVacancySkills=vacancy_skills,
             ),
-        ),
-        VacancyRecommendation(
-            id="vacancy_003",
-            rank=3,
-            title="BI Analyst",
-            company="Тинькофф",
-            city="Москва",
-            url="https://hh.ru/vacancy/333333",
-            source="hh.ru",
-            format="офис",
-            experience=VacancyExperience(
-                label="2-3 года",
-                minYears=2,
-                maxYears=3,
-            ),
-            scores=VacancyScores(
-                totalScore=0.72,
-                semanticScore=0.72,
-                skillScore=0.75,
-                experienceScore=0.72,
-            ),
-            matching=VacancyMatching(
-                skillMatch=SkillMatch(
-                    matched=[
-                        "SQL",
-                        "Excel",
-                        "Data Visualization",
-                        "Statistics",
-                    ],
-                    partial=[
-                        "Data Analysis",
-                    ],
-                    missing=[
-                        "Power BI",
-                        "Tableau",
-                    ],
-                ),
-                candidateExperienceYears=selected_resume.experienceYears,
-                requiredExperienceLabel="2-3 года",
-                experienceComment="Опыт кандидата находится в допустимом диапазоне",
-                allResumeSkills=selected_resume.skills,
-                allVacancySkills=[
-                    "SQL",
-                    "Excel",
-                    "Power BI",
-                    "Tableau",
-                    "Data Visualization",
-                    "Statistics",
-                    "Data Analysis",
-                ],
-            ),
-        ),
-        VacancyRecommendation(
-            id="vacancy_004",
-            rank=4,
-            title="Data Engineer",
-            company="Контур",
-            city="Москва",
-            url="https://hh.ru/vacancy/444444",
-            source="hh.ru",
-            format="офис",
-            experience=VacancyExperience(
-                label="3-5 лет",
-                minYears=3,
-                maxYears=5,
-            ),
-            scores=VacancyScores(
-                totalScore=0.64,
-                semanticScore=0.64,
-                skillScore=0.60,
-                experienceScore=0.70,
-            ),
-            matching=VacancyMatching(
-                skillMatch=SkillMatch(
-                    matched=[
-                        "Python",
-                        "SQL",
-                    ],
-                    partial=[
-                        "Pandas",
-                    ],
-                    missing=[
-                        "Airflow",
-                        "Docker",
-                        "Spark",
-                    ],
-                ),
-                candidateExperienceYears=selected_resume.experienceYears,
-                requiredExperienceLabel="3-5 лет",
-                experienceComment="Опыт кандидата находится на нижней границе требований",
-                allResumeSkills=selected_resume.skills,
-                allVacancySkills=[
-                    "Python",
-                    "SQL",
-                    "Airflow",
-                    "Docker",
-                    "Spark",
-                    "Pandas",
-                ],
-            ),
-        ),
-        VacancyRecommendation(
-            id="vacancy_005",
-            rank=5,
-            title="ML Analyst",
-            company="Ozon",
-            city="Москва",
-            url="https://hh.ru/vacancy/555555",
-            source="hh.ru",
-            format="гибрид",
-            experience=VacancyExperience(
-                label="2-4 года",
-                minYears=2,
-                maxYears=4,
-            ),
-            scores=VacancyScores(
-                totalScore=0.58,
-                semanticScore=0.58,
-                skillScore=0.55,
-                experienceScore=0.60,
-            ),
-            matching=VacancyMatching(
-                skillMatch=SkillMatch(
-                    matched=[
-                        "Python",
-                        "Machine Learning",
-                        "Statistics",
-                    ],
-                    partial=[
-                        "Pandas",
-                        "NumPy",
-                    ],
-                    missing=[
-                        "PyTorch",
-                        "NLP",
-                        "Docker",
-                    ],
-                ),
-                candidateExperienceYears=selected_resume.experienceYears,
-                requiredExperienceLabel="2-4 года",
-                experienceComment="Опыт кандидата подходит, но есть недостающие навыки",
-                allResumeSkills=selected_resume.skills,
-                allVacancySkills=[
-                    "Python",
-                    "Machine Learning",
-                    "Statistics",
-                    "Pandas",
-                    "NumPy",
-                    "PyTorch",
-                    "NLP",
-                    "Docker",
-                ],
-            ),
-        ),
-    ]
+        )
+
+        vacancies.append(vacancy)
 
     return vacancies
-
 
 def get_metrics() -> Metrics:
     """
@@ -326,7 +237,7 @@ def get_top_vacancies(raw_resume: str) -> RecommendationResponse:
     selected_resume = get_selected_resume(raw_resume)
 
     recommendations = get_vacancy_recommendations(
-        selected_resume=selected_resume
+        selected_resume=selected_resume, 
     )
 
     metrics = get_metrics()

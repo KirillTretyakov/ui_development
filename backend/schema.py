@@ -36,6 +36,7 @@ class SelectedResume(BaseModel):
     title: str
     experienceYears: float
     skills: List[str] = Field(default_factory=list)
+    clean_text: str
 
 
 # ============================================================
