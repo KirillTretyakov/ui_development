@@ -65,7 +65,7 @@ export default function ResumeUploadPage({ onMatchResult }) {
     } catch (error) {
       console.error(error);
       setErrorText(
-        "Ошибка при подборе вакансий. Проверь, запущен ли backend и доступен ли endpoint /get_data_pdf."
+        "Ошибка при подборе вакансий."
       );
     } finally {
       setLoading(false);
@@ -89,7 +89,7 @@ export default function ResumeUploadPage({ onMatchResult }) {
           <h2>Загрузка резюме</h2>
 
           <p className="upload-card__description">
-            Загрузите PDF-файл резюме. Backend извлечет текст из файла и подберет подходящие вакансии.
+            Загрузите PDF-файл резюме для подбора подходящих вакансий.
           </p>
 
           <input
@@ -163,7 +163,7 @@ export default function ResumeUploadPage({ onMatchResult }) {
             <div className="info-item">
               <h3>3. Рекомендации</h3>
               <p>
-                Система возвращает top-5 вакансий с итоговой оценкой
+                Система возвращает 5 вакансий с наибольшей итоговой оценкой
                 соответствия.
               </p>
             </div>
@@ -172,8 +172,7 @@ export default function ResumeUploadPage({ onMatchResult }) {
         <section className="eda-section">
           <h2>Анализ данных</h2>
           <p>
-            Ниже представлены некоторые характеристики данных, использованных при
-            построении модели сопоставления резюме и вакансий.
+            Ниже представлены некоторые характеристики данных, выявленных в части EDA.
           </p>
 
           <div className="eda-charts-grid">
@@ -347,7 +346,31 @@ export default function ResumeUploadPage({ onMatchResult }) {
     </div>
   </div>
 </section>
-          <ModelComparisonChart />
+          <section className="model-comparison-section">
+  <h2>Сравнение моделей</h2>
+  <p>
+    Ниже приведены метрики для трех подходов к сопоставлению резюме и вакансий.
+  </p>
+
+  <div className="metrics-description">
+    <div>
+      <strong>Pseudo@5</strong>
+      <p>Средняя итоговая оценка качества top-5 рекомендаций по псевдоразметке.</p>
+    </div>
+
+    <div>
+      <strong>Skill@5</strong>
+      <p>Насколько хорошо вакансии из top-5 совпадают с резюме по навыкам.</p>
+    </div>
+
+    <div>
+      <strong>Exp@5</strong>
+      <p>Насколько требования вакансий из top-5 соответствуют опыту кандидата.</p>
+    </div>
+  </div>
+
+  <ModelComparisonChart />
+</section>
                 
       </div>
     </main>
